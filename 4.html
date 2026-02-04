@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>社会实践小助手 - 智能答疑平台</title>
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 全局样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+        }
+
+        /* 页面整体样式 - 保留渐变背景+修复移动端滑动 */
+        body {
+            min-height: 100vh;
+            background: linear-gradient(120deg, #f5f7fa, #e4eaf5);
+            color: #333;
+            position: relative;
+            padding-bottom: 60px;
+            opacity: 1;
+            transition: opacity 0.6s ease;
+            overflow-x: hidden;
+            overflow-y: auto; /* 强制移动端纵向可滑动，核心修复1 */
+            height: auto; /* 取消高度固定，适配内容高度，核心修复2 */
+        }
+
+        /* 页面加载状态 */
+        body.loading {
+            opacity: 0.85;
+        }
+
+        /* 页面头部 - 拉宽适配+移动端兼容 */
+        .page-header {
+            background: #2c68c8;
+            color: white;
+            padding: 1.2rem 3%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .header-desc {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-top: 0.3rem;
+            font-weight: 400;
+        }
+
+        .header-nav a {
+            color: white;
+            text-decoration: none;
+            margin-left: 1.5rem;
+            font-size: 0.95rem;
+            transition: opacity 0.3s;
+        }
+
+        .header-nav a:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        /* 核心：四大功能板块 - 拉宽布局+移动端自适应 */
+        .feature-section {
+            max-width: 1400px;
+            margin: 0 auto 4rem;
+            padding: 0 3%;
+        }
+        .feature-title {
+            text-align: center;
+            font-size: 1.6rem;
+            color: #2c68c8;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+        .feature-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        .feature-card {
+            background: white;
+            padding: 2rem 1.8rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(44, 104, 200, 0.08);
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .feature-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 8px 25px rgba(44, 104, 200, 0.15);
+        }
+        .feature-card i {
+            font-size: 2.2rem;
+            color: #2c68c8;
+            margin-bottom: 1.2rem;
+        }
+        .feature-card h3 {
+            font-size: 1.3rem;
+            color: #2c68c8;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+        }
+        .feature-card p {
+            color: #666;
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+
+        /* 引导按钮 - 拉宽适配+移动端全屏 */
+        .guide-btn {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 0 3%;
+        }
+        .enter-chat {
+            background: #2c68c8;
+            color: white;
+            border: none;
+            padding: 1rem 2.2rem;
+            font-size: 1.15rem;
+            border-radius: 8px;
+            cursor: default;
+            pointer-events: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 12px rgba(44, 104, 200, 0.2);
+            opacity: 0.9;
+        }
+
+        /* 核心：聊天框容器 - 修复移动端拖动+双端适配 */
+        #position_demo {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 999;
+            cursor: move;
+            touch-action: none;
+            user-select: none;
+            transition: all 0.3s ease-in-out;
+            width: auto; /* 重置宽度，让SDK自适应，核心修复3 */
+            height: auto; /* 重置高度，让SDK自适应，核心修复4 */
+        }
+        .dragging {
+            cursor: grabbing !important;
+        }
+
+        /* 页面底部 - 毛玻璃效果+移动端适配 */
+        .page-footer {
+            text-align: center;
+            padding: 1rem;
+            color: #888;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 998;
+            backdrop-filter: blur(4px);
+        }
+        .page-footer a {
+            color: #2c68c8;
+            text-decoration: none;
+            margin: 0 0.3rem;
+        }
+
+        /* 全终端响应式适配 - 重点优化移动端（768px以下） */
+        @media (max-width: 1400px) {
+            .header-title {
+                font-size: 1.7rem;
+            }
+            .feature-title {
+                font-size: 1.55rem;
+            }
+        }
+        @media (max-width: 1200px) {
+            .header-title {
+                font-size: 1.6rem;
+            }
+            .feature-title {
+                font-size: 1.5rem;
+            }
+            .feature-cards {
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            }
+        }
+        @media (max-width: 768px) {
+            /* 头部适配 */
+            .page-header {
+                padding: 1rem 3%;
+                margin-bottom: 2rem;
+            }
+            .header-nav {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+            .header-nav a {
+                margin-left: 0.8rem;
+                font-size: 0.9rem;
+            }
+            .header-title {
+                font-size: 1.5rem;
+            }
+            .header-desc {
+                font-size: 0.9rem;
+            }
+
+            /* 四大板块适配 - 移动端单列/双列，更紧凑 */
+            .feature-section {
+                max-width: 100%;
+                margin-bottom: 2.5rem;
+            }
+            .feature-title {
+                font-size: 1.4rem;
+                margin-bottom: 1.5rem;
+            }
+            .feature-cards {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 1rem;
+            }
+            .feature-card {
+                padding: 1.2rem 0.8rem;
+            }
+            .feature-card i {
+                font-size: 1.8rem;
+                margin-bottom: 0.8rem;
+            }
+            .feature-card h3 {
+                font-size: 1.1rem;
+                margin-bottom: 0.6rem;
+            }
+            .feature-card p {
+                font-size: 0.85rem;
+                line-height: 1.6;
+            }
+
+            /* 引导按钮适配 - 移动端全屏显示 */
+            .enter-chat {
+                font-size: 0.95rem;
+                padding: 0.8rem 1.2rem;
+                width: 95%;
+                justify-content: center;
+            }
+
+            /* 🔥 移动端聊天框核心适配 - 解决过宽问题，贴合手机屏幕 */
+            #position_demo {
+                width: 98% !important; /* 几乎占满屏幕，无侧边空白 */
+                height: 85vh !important; /* 适配手机可视高度，不遮挡底部 */
+                left: 50% !important;
+                top: 50% !important;
+                transform: translate(-50%, -50%) !important;
+            }
+
+            /* 悬浮窗适配 - 移动端右下角无遮挡 */
+            [data-testid="assistant-btn"] {
+                bottom: 70px !important; /* 避开底部版权栏 */
+                right: 10px !important; /* 贴近右侧，不占空间 */
+                width: 50px !important;
+                height: 50px !important;
+            }
+        }
+        @media (max-width: 480px) {
+            .header-title {
+                font-size: 1.3rem;
+            }
+            .feature-title {
+                font-size: 1.2rem;
+            }
+            .page-footer {
+                font-size: 0.8rem;
+                padding: 0.7rem;
+            }
+            /* 小屏手机聊天框再优化 */
+            #position_demo {
+                height: 80vh !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="loading">
+    <!-- 页面头部 -->
+    <header class="page-header">
+        <div>
+            <h1 class="header-title">
+                <i class="fas fa-hand-holding-heart"></i>
+                社会实践小助手
+            </h1>
+            <p class="header-desc">你的专属AI社会实践伙伴 | 一站式解决实践全流程需求</p>
+        </div>
+        <nav class="header-nav">
+            <a href="javascript:;"><i class="fas fa-question-circle"></i> 使用指南</a>
+            <a href="javascript:;"><i class="fas fa-file-alt"></i> 实践模板</a>
+            <a href="javascript:;"><i class="fas fa-user-circle"></i> 关于我们</a>
+        </nav>
+    </header>
+
+    <!-- 四大功能板块 -->
+    <section class="feature-section">
+        <h2 class="feature-title">核心功能 · 为你的社会实践保驾护航</h2>
+        <div class="feature-cards">
+            <div class="feature-card">
+                <i class="fas fa-question-circle"></i>
+                <h3>智能答疑</h3>
+                <p>7*24小时解答社会实践相关疑问，政策解读、流程咨询、常见问题快速响应</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-sitemap"></i>
+                <h3>方案规划</h3>
+                <p>根据实践主题、人群、场地，智能生成个性化实践方案，含流程、时间、物料全规划</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-lightbulb"></i>
+                <h3>问题解决</h3>
+                <p>针对实践中突发问题、沟通难题、执行障碍，快速给出可行的解决思路和落地方法</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-book-reader"></i>
+                <h3>经验分享</h3>
+                <p>提供各类优秀社会实践案例、经验技巧，帮助你规避误区，提升实践质量和成果</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 引导按钮 -->
+    <div class="guide-btn">
+        <button class="enter-chat" id="openChat">
+            <i class="fas fa-comment-dots"></i>
+            点击右下角悬浮窗开启智能咨询 | 聊天框支持自由拖动
+        </button>
+    </div>
+
+    <!-- 聊天框核心容器 -->
+    <div id="position_demo"></div>
+
+    <!-- 页面底部 -->
+    <footer class="page-footer">
+        © 2026 社会实践小助手 | 由 <a href="https://www.coze.cn" target="_blank">字节跳动Coze</a> 提供智能技术支持
+    </footer>
+
+    <!-- 引入Coze Web SDK -->
+    <script src="https://lf-cdn.coze.cn/obj/unpkg/flow-platform/chat-app-sdk/1.2.0-beta.20/libs/cn/index.js"></script>
+    <script>
+        // 页面加载完成移除加载状态+初始化拖动
+        window.addEventListener('load', () => {
+            document.body.classList.remove('loading');
+            initDragFunction();
+            // 移动端初始化后强制适配样式，防止SDK默认样式覆盖
+            if (window.innerWidth <= 768) {
+                const demoBox = document.getElementById('position_demo');
+                demoBox.style.width = '98%';
+                demoBox.style.height = '85vh';
+            }
+        });
+
+        // 核心：自由拖动功能 - 优化移动端触摸事件，兼容鼠标+触摸操作
+        function initDragFunction() {
+            const dragBox = document.getElementById('position_demo');
+            let isDragging = false;
+            let startX = 0;
+            let startY = 0;
+            let boxLeft = 0;
+            let boxTop = 0;
+            const isMobile = window.innerWidth <= 768; // 判断是否为移动端
+
+            // 兼容鼠标+触摸按下事件
+            const downEvent = isMobile ? 'touchstart' : 'mousedown';
+            const moveEvent = isMobile ? 'touchmove' : 'mousemove';
+            const upEvent = isMobile ? 'touchend' : 'mouseup';
+            const leaveEvent = isMobile ? 'touchcancel' : 'mouseleave';
+
+            // 按下/触摸开始
+            dragBox.addEventListener(downEvent, (e) => {
+                // 移动端获取触摸点坐标，PC端获取鼠标坐标
+                const clientX = isMobile ? e.touches[0].clientX : e.clientX;
+                const clientY = isMobile ? e.touches[0].clientY : e.clientY;
+                
+                isDragging = true;
+                dragBox.classList.add('dragging');
+                startX = clientX;
+                startY = clientY;
+                dragBox.style.transform = 'none';
+                boxLeft = parseInt(dragBox.style.left) || 0;
+                boxTop = parseInt(dragBox.style.top) || 0;
+                e.preventDefault(); // 阻止移动端默认滚动，核心修复5
+                e.stopPropagation();
+            });
+
+            // 移动/触摸滑动
+            document.addEventListener(moveEvent, (e) => {
+                if (!isDragging) return;
+                const clientX = isMobile ? e.touches[0].clientX : e.clientX;
+                const clientY = isMobile ? e.touches[0].clientY : e.clientY;
+                
+                const moveX = clientX - startX;
+                const moveY = clientY - startY;
+                dragBox.style.left = `${boxLeft + moveX}px`;
+                dragBox.style.top = `${boxTop + moveY}px`;
+                e.preventDefault(); // 阻止移动端拖动时页面滚动
+                e.stopPropagation();
+            });
+
+            // 松开/触摸结束
+            document.addEventListener(upEvent, () => {
+                if (isDragging) {
+                    isDragging = false;
+                    dragBox.classList.remove('dragging');
+                }
+            });
+
+            // 取消操作/离开区域
+            document.addEventListener(leaveEvent, () => {
+                if (isDragging) {
+                    isDragging = false;
+                    dragBox.classList.remove('dragging');
+                }
+            });
+        }
+
+        // 初始化Coze Web SDK - 双端适配：PC900px超宽+移动端自适应
+        const cozeWebSDK = new CozeWebSDK.WebChatClient({
+            container: document.getElementById('position_demo'),
+            config: {
+                type: 'bot',
+                bot_id: '7601815963067760682', // 替换为你的智能体ID
+                isIframe: false,
+            },
+            auth: {
+                type: 'token',
+                token: 'pat_WqiTjruHTeavgBQpYPfIqKtqi0cDMJoT6pivmKI5bO5pkIODd467jEB6egdSrogv', // 替换为你的token
+                onRefreshToken: async () => 'token'
+            },
+            userInfo: {
+                id: 'user123',
+                url: 'https://lf-coze-web-cdn.coze.cn/obj/eden-cn/lm-lgvj/ljhwZthlaukjlkulzlp/coze/coze-logo.png',
+                nickname: '实践参与者',
+            },
+            ui: {
+                base: {
+                    icon: 'https://lf-coze-web-cdn.coze.cn/obj/eden-cn/lm-lgvj/ljhwZthlaukjlkulzlp/coze/chatsdk-logo.png',
+                    layout: window.innerWidth <= 768 ? 'mobile' : 'pc', // 动态判断布局，核心适配
+                    lang: 'zh-CN',
+                    zIndex: 1000,
+                },
+                header: {
+                    isShow: true,
+                    isNeedClose: true,
+                },
+                asstBtn: {
+                    isNeed: true,
+                    icon: 'https://lf-coze-web-cdn.coze.cn/obj/eden-cn/lm-lgvj/ljhwZthlaukjlkulzlp/coze/assistant-btn-icon.png',
+                    position: { // 悬浮窗位置优化，双端不同
+                        bottom: window.innerWidth <= 768 ? 70 : 20,
+                        right: window.innerWidth <= 768 ? 10 : 20,
+                    }
+                },
+                footer: {
+                    isShow: true,
+                    expressionText: '由 {{coze}} 提供智能技术支持',
+                    linkvars: {
+                        coze: { text: '字节跳动Coze', link: 'https://www.coze.cn/' }
+                    }
+                },
+                conversations: {
+                    isNeed: true,
+                },
+                chatBot: {
+                    title: '社会实践小助手',
+                    uploadable: true,
+                    width: window.innerWidth <= 768 ? '100%' : 900, // 🔥 动态宽度：移动端100%/PC900px
+                    height: window.innerWidth <= 768 ? '85vh' : 780, // 🔥 动态高度：移动端适配视口/PC固定高度
+                    isNeedAudio: false,
+                    isNeedFunctionCallMessage: true,
+                    isNeedAddNewConversation: true,
+                    isNeedQuote: true,
+                    feedback: {
+                        isNeedFeedback: true,
+                        feedbackPanel: {
+                            title: '您对这个实践解答有什么看法？请告诉我们',
+                            placeholder: '请详细描述您的问题或建议...',
+                            tags: [
+                                { label: '解答不够详细', isNeedDetail: false },
+                                { label: '解答内容错误', isNeedDetail: false },
+                                { label: '不符合实践需求', isNeedDetail: true },
+                                { label: '其他问题', isNeedDetail: true },
+                            ],
+                        },
+                    },
+                },
+            },
+        });
+        // 保留悬浮窗直显，无初始化隐藏
+    </script>
+</body>
+</html>
