@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>社会实践小助手 - 智能答疑平台</title>
+    <!-- 引入字体图标 -->
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 全局样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+        }
+
+        /* 页面背景 + 加载过渡 */
+        body {
+            min-height: 100vh;
+            background: linear-gradient(120deg, #f5f7fa, #e4eaf5);
+            color: #333;
+            position: relative;
+            padding-bottom: 60px;
+            opacity: 1;
+            transition: opacity 0.6s ease;
+            overflow-x: hidden;
+        }
+        body.loading { opacity: 0.85; }
+
+        /* 页面头部 */
+        .page-header {
+            background: #2c68c8;
+            color: white;
+            padding: 1.2rem 3%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        .header-desc {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-top: 0.3rem;
+            font-weight: 400;
+        }
+        .header-nav a {
+            color: white;
+            text-decoration: none;
+            margin-left: 1.5rem;
+            font-size: 0.95rem;
+            transition: opacity 0.3s;
+        }
+        .header-nav a:hover { opacity: 0.8; text-decoration: underline; }
+
+        /* 四大功能板块（适配移动端） */
+        .feature-section {
+            max-width: 1400px;
+            margin: 0 auto 4rem;
+            padding: 0 3%;
+        }
+        .feature-title {
+            text-align: center;
+            font-size: 1.6rem;
+            color: #2c68c8;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+        .feature-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        .feature-card {
+            background: white;
+            padding: 2rem 1.8rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(44, 104, 200, 0.08);
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .feature-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 8px 25px rgba(44, 104, 200, 0.15);
+        }
+        .feature-card i {
+            font-size: 2.2rem;
+            color: #2c68c8;
+            margin-bottom: 1.2rem;
+        }
+        .feature-card h3 {
+            font-size: 1.3rem;
+            color: #2c68c8;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+        }
+        .feature-card p {
+            color: #666;
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+
+        /* 引导按钮 */
+        .guide-btn {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 0 3%;
+        }
+        .enter-chat {
+            background: #2c68c8;
+            color: white;
+            border: none;
+            padding: 1rem 2.2rem;
+            font-size: 1.15rem;
+            border-radius: 8px;
+            cursor: default;
+            pointer-events: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 12px rgba(44, 104, 200, 0.2);
+            opacity: 0.9;
+        }
+
+        /* 聊天框容器（支持拖动+移动端适配） */
+        #position_demo {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 999;
+            cursor: move;
+            touch-action: none;
+            user-select: none;
+            transition: all 0.3s ease-in-out;
+        }
+        .dragging { cursor: grabbing !important; }
+
+        /* 页面底部（毛玻璃效果） */
+        .page-footer {
+            text-align: center;
+            padding: 1rem;
+            color: #888;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 998;
+            backdrop-filter: blur(4px);
+        }
+        .page-footer a {
+            color: #2c68c8;
+            text-decoration: none;
+            margin: 0 0.3rem;
+        }
+
+        /* 调试面板样式（核心：排查错误） */
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 9999;
+            background: #fff;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 12px;
+            max-width: 350px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .debug-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 9999;
+            background: #2c68c8;
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .debug-log {
+            margin: 5px 0;
+            padding: 3px 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        .debug-log.success { color: #28a745; }
+        .debug-log.error { color: #dc3545; }
+        .debug-log.info { color: #17a2b8; }
+
+        /* 移动端适配（768px 以下） */
+        @media (max-width: 768px) {
+            .page-header { padding: 1rem 3%; margin-bottom: 2rem; }
+            .header-nav { width: 100%; margin-top: 0.5rem; }
+            .header-nav a { margin-left: 0.8rem; font-size: 0.9rem; }
+            .header-title { font-size: 1.5rem; }
+            .feature-title { font-size: 1.4rem; margin-bottom: 1.5rem; }
+            .feature-cards { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+            .feature-card { padding: 1.2rem 0.8rem; }
+            .enter-chat { font-size: 0.95rem; padding: 0.8rem 1.2rem; width: 95%; justify-content: center; }
+            #position_demo { width: 98% !important; height: 85vh !important; }
+            [data-testid="assistant-btn"] { bottom: 70px !important; right: 10px !important; }
+            .debug-panel { max-width: 90%; left: 5%; top: 50px; }
+        }
+    </style>
+</head>
+
+<body class="loading">
+    <!-- 调试按钮 + 调试面板 -->
+    <button class="debug-btn" onclick="toggleDebugPanel()">📝 调试面板</button>
+    <div class="debug-panel" id="debugPanel"></div>
+
+    <!-- 页面头部 -->
+    <header class="page-header">
+        <div>
+            <h1 class="header-title">
+                <i class="fas fa-hand-holding-heart"></i>
+                社会实践小助手
+            </h1>
+            <p class="header-desc">你的专属AI社会实践伙伴 | 一站式解决实践全流程需求</p>
+        </div>
+        <nav class="header-nav">
+            <a href="javascript:;"><i class="fas fa-question-circle"></i> 使用指南</a>
+            <a href="javascript:;"><i class="fas fa-file-alt"></i> 实践模板</a>
+            <a href="javascript:;"><i class="fas fa-user-circle"></i> 关于我们</a>
+        </nav>
+    </header>
+
+    <!-- 四大功能板块 -->
+    <section class="feature-section">
+        <h2 class="feature-title">核心功能 · 为你的社会实践保驾护航</h2>
+        <div class="feature-cards">
+            <div class="feature-card">
+                <i class="fas fa-question-circle"></i>
+                <h3>智能答疑</h3>
+                <p>7*24小时解答社会实践相关疑问，政策解读、流程咨询、常见问题快速响应</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-sitemap"></i>
+                <h3>方案规划</h3>
+                <p>根据实践主题、人群、场地，智能生成个性化实践方案，含流程、时间、物料全规划</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-lightbulb"></i>
+                <h3>问题解决</h3>
+                <p>针对实践中突发问题、沟通难题、执行障碍，快速给出可行的解决思路和落地方法</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-book-reader"></i>
+                <h3>经验分享</h3>
+                <p>提供各类优秀社会实践案例、经验技巧，帮助你规避误区，提升实践质量和成果</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 引导按钮 -->
+    <div class="guide-btn">
+        <button class="enter-chat" id="openChat">
+            <i class="fas fa-comment-dots"></i>
+            点击右下角悬浮窗开启智能咨询 | 聊天框支持自由拖动
+        </button>
+    </div>
+
+    <!-- 聊天框容器（Coze SDK 挂载点） -->
+    <div id="position_demo"></div>
+
+    <!-- 页面底部 -->
+    <footer class="page-footer">
+        © 2026 社会实践小助手 | 由 <a href="https://www.coze.cn" target="_blank">字节跳动Coze</a> 提供智能技术支持
+    </footer>
+
+    <!-- 引入 Coze Web SDK -->
+    <script src="https://lf-cdn.coze.cn/obj/unpkg/flow-platform/chat-app-sdk/1.2.0-beta.20/libs/cn/index.js"></script>
+    <script>
+        // ===================== 核心：调试日志功能（排查错误关键） =====================
+        let debugLogs = [];
+        const debugPanel = document.getElementById('debugPanel');
+        
+        // 切换调试面板显示/隐藏
+        function toggleDebugPanel() {
+            debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+            renderDebugLogs();
+        }
+        
+        // 添加调试日志
+        function addDebugLog(type, message) {
+            const log = {
+                time: new Date().toLocaleTimeString(),
+                type: type, // success/error/info
+                message: message
+            };
+            debugLogs.push(log);
+            renderDebugLogs();
+            console.log(`[${log.time}] [${log.type}] ${log.message}`);
+        }
+        
+        // 渲染调试日志到面板
+        function renderDebugLogs() {
+            debugPanel.innerHTML = debugLogs.map(log => 
+                `<div class="debug-log ${log.type}">
+                    <strong>[${log.time}]</strong> ${log.message}
+                </div>`
+            ).join('');
+            // 滚动到最新日志
+            debugPanel.scrollTop = debugPanel.scrollHeight;
+        }
+
+        // ===================== 核心：生成浏览器唯一ID（会话隔离关键） =====================
+        function getLocalUniqueId() {
+            // 从本地存储读取ID，无则生成（每个浏览器/设备唯一）
+            let userId = localStorage.getItem('coze_user_unique_id');
+            if (!userId) {
+                // 生成UUID v4（兼容所有浏览器）
+                userId = 'user_' + ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+                    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+                );
+                localStorage.setItem('coze_user_unique_id', userId);
+                addDebugLog('info', `生成新的用户唯一ID：${userId}`);
+            } else {
+                addDebugLog('info', `读取本地用户唯一ID：${userId}`);
+            }
+            return userId;
+        }
+
+        // ===================== 核心：调用后端获取Token（带详细错误排查） =====================
+        async function getCozeToken() {
+            const userId = getLocalUniqueId();
+            try {
+                // 【必须替换】你的Vercel后端域名（例如：https://coze-backend-1234.vercel.app）
+                const BACKEND_DOMAIN = 'https://coze-backend-rmzc4swt7-yancy-nbs-projects.vercel.app';
+                const tokenApiUrl = `${BACKEND_DOMAIN}/api/get-coze-token`;
+                
+                addDebugLog('info', `开始调用Token接口：${tokenApiUrl}`);
+                addDebugLog('info', `传入用户ID：${userId}`);
+
+                // 发送POST请求
+                const response = await fetch(tokenApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ user_id: userId })
+                });
+
+                // 解析响应
+                const responseText = await response.text();
+                addDebugLog('info', `接口原始响应：${responseText}`);
+                
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch (e) {
+                    throw new Error(`后端返回非JSON格式：${responseText}`);
+                }
+
+                // 检查响应状态
+                if (!response.ok) {
+                    throw new Error(`接口返回错误状态码：${response.status}，信息：${JSON.stringify(responseData)}`);
+                }
+
+                // 检查Token是否存在
+                if (responseData.code === 200 && responseData.data?.token) {
+                    addDebugLog('success', `Token获取成功（有效期：${responseData.data.expire || 3600}秒）`);
+                    return responseData.data.token;
+                } else {
+                    throw new Error(`Token接口返回异常：${responseData.message || '未知错误'}，调试信息：${responseData.debug || '无'}`);
+                }
+
+            } catch (error) {
+                addDebugLog('error', `Token获取失败：${error.message}`);
+                alert(`⚠️ Token获取失败\n${error.message}\n\n请打开调试面板查看详细日志`);
+                return null;
+            }
+        }
+
+        // ===================== 核心：初始化聊天框拖动功能（PC+移动端） =====================
+        function initDragFunction() {
+            const dragBox = document.getElementById('position_demo');
+            let isDragging = false;
+            let startX = 0, startY = 0, boxLeft = 0, boxTop = 0;
+            const isMobile = window.innerWidth <= 768;
+
+            // 兼容PC鼠标/移动端触摸事件
+            const downEvent = isMobile ? 'touchstart' : 'mousedown';
+            const moveEvent = isMobile ? 'touchmove' : 'mousemove';
+            const upEvent = isMobile ? 'touchend' : 'mouseup';
+
+            // 按下/触摸开始
+            dragBox.addEventListener(downEvent, (e) => {
+                const clientX = isMobile ? e.touches[0].clientX : e.clientX;
+                const clientY = isMobile ? e.touches[0].clientY : e.clientY;
+                
+                isDragging = true;
+                dragBox.classList.add('dragging');
+                startX = clientX;
+                startY = clientY;
+                dragBox.style.transform = 'none';
+                boxLeft = parseInt(dragBox.style.left) || 0;
+                boxTop = parseInt(dragBox.style.top) || 0;
+                e.preventDefault();
+            });
+
+            // 移动/触摸滑动
+            document.addEventListener(moveEvent, (e) => {
+                if (!isDragging) return;
+                const clientX = isMobile ? e.touches[0].clientX : e.clientX;
+                const clientY = isMobile ? e.touches[0].clientY : e.clientY;
+                
+                const moveX = clientX - startX;
+                const moveY = clientY - startY;
+                dragBox.style.left = `${boxLeft + moveX}px`;
+                dragBox.style.top = `${boxTop + moveY}px`;
+                e.preventDefault();
+            });
+
+            // 松开/触摸结束
+            document.addEventListener(upEvent, () => {
+                if (isDragging) {
+                    isDragging = false;
+                    dragBox.classList.remove('dragging');
+                }
+            });
+
+            addDebugLog('info', '拖动功能初始化完成');
+        }
+
+        // ===================== 核心：初始化Coze SDK =====================
+        async function initCozeSDK() {
+            addDebugLog('info', '开始初始化Coze Web SDK');
+            
+            // 获取Token
+            const token = await getCozeToken();
+            if (!token) {
+                addDebugLog('error', 'Token为空，终止SDK初始化');
+                return;
+            }
+
+            try {
+                // 【必须替换】你的Coze智能体Bot ID
+                const BOT_ID = '7601815963067760682';
+                
+                // 初始化SDK
+                const cozeWebSDK = new CozeWebSDK.WebChatClient({
+                    container: document.getElementById('position_demo'),
+                    config: {
+                        type: 'bot',
+                        bot_id: BOT_ID,
+                        isIframe: false
+                    },
+                    auth: {
+                        type: 'token',
+                        token: token,
+                        // Token过期自动刷新
+                        onRefreshToken: async () => {
+                            addDebugLog('info', 'Token即将过期，开始刷新');
+                            const newToken = await getCozeToken();
+                            return newToken || '';
+                        }
+                    },
+                    userInfo: {
+                        id: getLocalUniqueId(), // 会话隔离核心：用户唯一ID
+                        nickname: '实践参与者',
+                        avatar: 'https://lf-coze-web-cdn.coze.cn/obj/eden-cn/lm-lgvj/ljhwZthlaukjlkulzlp/coze/coze-logo.png'
+                    },
+                    ui: {
+                        base: {
+                            icon: 'https://lf-coze-web-cdn.coze.cn/obj/eden-cn/lm-lgvj/ljhwZthlaukjlkulzlp/coze/chatsdk-logo.png',
+                            layout: window.innerWidth <= 768 ? 'mobile' : 'pc', // 自适应布局
+                            lang: 'zh-CN',
+                            zIndex: 1000
+                        },
+                        header: { isShow: true, isNeedClose: true },
+                        asstBtn: {
+                            isNeed: true, // 显示右下角悬浮窗
+                            icon: 'https://lf-coze-web-cdn.coze.cn/obj/eden-cn/lm-lgvj/ljhwZthlaukjlkulzlp/coze/assistant-btn-icon.png',
+                            position: { 
+                                bottom: window.innerWidth <= 768 ? 70 : 20, 
+                                right: window.innerWidth <= 768 ? 10 : 20 
+                            }
+                        },
+                        footer: {
+                            isShow: true,
+                            expressionText: '由 {{coze}} 提供智能技术支持',
+                            linkvars: { 
+                                coze: { text: '字节跳动Coze', link: 'https://www.coze.cn/' } 
+                            }
+                        },
+                        chatBot: {
+                            title: '社会实践小助手',
+                            width: window.innerWidth <= 768 ? '100%' : 900, // 自适应宽度
+                            height: window.innerWidth <= 768 ? '85vh' : 780, // 自适应高度
+                            isNeedAudio: false,
+                            isNeedQuote: true,
+                            uploadable: true // 允许上传文件
+                        }
+                    }
+                });
+
+                addDebugLog('success', 'Coze SDK初始化完成');
+            } catch (sdkError) {
+                addDebugLog('error', `SDK初始化失败：${sdkError.message}`);
+                alert(`⚠️ 聊天助手初始化失败\n${sdkError.message}`);
+            }
+        }
+
+        // ===================== 页面加载完成初始化 =====================
+        window.addEventListener('load', async () => {
+            addDebugLog('info', '页面加载完成，开始初始化');
+            document.body.classList.remove('loading'); // 移除加载状态
+            initDragFunction(); // 初始化拖动功能
+            await initCozeSDK(); // 初始化Coze SDK
+        });
+    </script>
+</body>
+</html>
