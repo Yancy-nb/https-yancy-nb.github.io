@@ -847,7 +847,7 @@
                             uploadable: false,
                             width: isMobile ? '100%' : (fullscreen && window.innerWidth > 768 ? '95vw' : 900),
                             height: isMobile ? '85vh' : (fullscreen && window.innerWidth > 768 ? '90vh' : 600),
-                            isNeedAudio: true,
+                            isNeedAudio: false,
                             isNeedFunctionCallMessage: false,
                             isNeedAddNewConversation: true,
                             isNeedQuote: true,
@@ -859,7 +859,7 @@
                                     tags: [
                                         { label: '解答不够详细', isNeedDetail: false },
                                         { label: '解答内容错误', isNeedDetail: false },
-                                        { label: '不符合实践需求', isNeedDetail: true },
+                                        { label: '不符合实践需求', isNeedDetail: false },
                                         { label: '其他问题', isNeedDetail: true },
                                     ],
                                 },
@@ -1035,3 +1035,4 @@
 </body>
 
 </html>
+
