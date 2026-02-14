@@ -844,11 +844,11 @@
                         },
                         chatBot: {
                             title: '社会实践小助手',
-                            uploadable: true,
+                            uploadable: false,
                             width: isMobile ? '100%' : (fullscreen && window.innerWidth > 768 ? '95vw' : 900),
                             height: isMobile ? '85vh' : (fullscreen && window.innerWidth > 768 ? '90vh' : 600),
-                            isNeedAudio: false,
-                            isNeedFunctionCallMessage: true,
+                            isNeedAudio: true,
+                            isNeedFunctionCallMessage: false,
                             isNeedAddNewConversation: true,
                             isNeedQuote: true,
                             feedback: {
@@ -1033,4 +1033,5 @@
         });
     </script>
 </body>
+
 </html>
